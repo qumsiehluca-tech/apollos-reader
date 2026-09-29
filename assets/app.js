@@ -7,6 +7,10 @@
   "use strict";
 
   var WORK = "plato-apology";
+  // Rewritten by tools/stamp_assets.py from a hash of data/. The JSON under
+  // data/ is served under fixed names, so without this a reader with a warm
+  // cache keeps yesterday's lexicon after a rebuild.
+  var DATA_V = "3be3221843";
   var STORE = "apollos-reader:";
   var PHONE = "(max-width: 760px)";
   var DRAWER = "(max-width: 1100px)";
@@ -456,7 +460,7 @@
     if (entryCache[id]) { host.innerHTML = entryCache[id]; positionPop(); return; }
     host.textContent = "";
     host.append(el("p", "lex-loading", "Fetching the entry…"));
-    fetch("data/lex/e/" + id + ".json")
+    fetch("data/lex/e/" + id + ".json?v=" + DATA_V)
       .then(function (r) { return r.json(); })
       .then(function (d) {
         entryCache[id] = d.html;
@@ -943,9 +947,9 @@
     });
 
     Promise.all([
-      fetch("data/works/" + WORK + "/text.json").then(function (r) { return r.json(); }),
-      fetch("data/works/" + WORK + "/morph.json").then(function (r) { return r.json(); }),
-      fetch("data/lex/manifest.json").then(function (r) { return r.json(); })
+      fetch("data/works/" + WORK + "/text.json?v=" + DATA_V).then(function (r) { return r.json(); }),
+      fetch("data/works/" + WORK + "/morph.json?v=" + DATA_V).then(function (r) { return r.json(); }),
+      fetch("data/lex/manifest.json?v=" + DATA_V).then(function (r) { return r.json(); })
     ]).then(function (res) {
       text = res[0]; morph = res[1]; lex = res[2];
       (lex.suppress || []).forEach(function (k) { suppressed[k] = 1; });

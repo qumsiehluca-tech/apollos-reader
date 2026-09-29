@@ -1,0 +1,13 @@
+{
+ "works": [
+  {
+   "slug": "plato-apology",
+   "title": "Apology of Socrates",
+   "titleGrc": "Ἀπολογία Σωκράτους",
+   "author": "Plato",
+   "sections": 125,
+   "first": "17a",
+   "last": "42a"
+  }
+ ]
+}

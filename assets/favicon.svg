@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="13" fill="#14120f"/>
+  <!-- a single meander turn, drawn as the mark -->
+  <g fill="none" stroke="#cd7f52" stroke-width="5" stroke-linecap="square">
+    <path d="M14 50V16h30v22H26v-11h11"/>
+  </g>
+</svg>

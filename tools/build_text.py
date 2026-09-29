@@ -130,7 +130,12 @@ def walk(node, lang, out):
 
 
 def tidy(s):
-    return re.sub(r"\s+", " ", s.replace("\n", " ")).strip()
+    s = re.sub(r"\s+", " ", s.replace("\n", " ")).strip()
+    # Perseus sets em dashes tight against the words on either side, which is
+    # hard to see on screen and, in interlinear mode, glues the dash to a word
+    # column. Give them room without touching anything else.
+    s = re.sub(r"\s*—\s*", " — ", s)
+    return s.strip()
 
 
 def build_side(path, lang):

@@ -10,7 +10,7 @@
   // Rewritten by tools/stamp_assets.py from a hash of data/. The JSON under
   // data/ is served under fixed names, so without this a reader with a warm
   // cache keeps yesterday's lexicon after a rebuild.
-  var DATA_V = "3be3221843";
+  var DATA_V = "52874ac92d";
   var STORE = "apollos-reader:";
   var PHONE = "(max-width: 760px)";
   var DRAWER = "(max-width: 1100px)";
@@ -53,6 +53,338 @@
   function abbreviate(parse) {
     if (!parse) return "";
     return parse.split(/\s+/).map(function (w) { return ABBR[w] || w; }).join(" ");
+  }
+
+  /* ========================================================================
+     Inflected glosses
+
+     A gloss under a Greek word should say what *that form* means, not what its
+     dictionary headword means: ANDRES is "men", not "man", and PEPO/NQATE is
+     "you have suffered", not "suffer". This takes the headword's gloss and the
+     parse and puts the English into the matching shape. It is deliberately not
+     a translation - each word is glossed on its own, so the line reads as
+     Greek word order, which is the point of an interlinear.
+     ======================================================================== */
+
+  var PLURAL_IRREG = {
+    man: "men", woman: "women", child: "children", person: "people",
+    foot: "feet", tooth: "teeth", ox: "oxen", mouse: "mice", goose: "geese",
+    life: "lives", wife: "wives", knife: "knives", self: "selves",
+    thief: "thieves", "half": "halves", city: "cities", enemy: "enemies",
+    deity: "deities", god: "gods", sheep: "sheep", offspring: "offspring",
+    youth: "youths", truth: "truths", death: "deaths", oath: "oaths"
+  };
+  function pluralise(w) {
+    if (PLURAL_IRREG[w]) return PLURAL_IRREG[w];
+    if (/[^aeiou]y$/.test(w)) return w.slice(0, -1) + "ies";
+    if (/(s|x|z|ch|sh)$/.test(w)) return w + "es";
+    if (/fe$/.test(w)) return w.slice(0, -2) + "ves";
+    return w + "s";
+  }
+
+  // base -> [third singular, past, past participle, -ing]
+  var VERB_IRREG = {
+    be: ["is", "was", "been", "being"],
+    have: ["has", "had", "had", "having"],
+    do: ["does", "did", "done", "doing"],
+    say: ["says", "said", "said", "saying"],
+    speak: ["speaks", "spoke", "spoken", "speaking"],
+    know: ["knows", "knew", "known", "knowing"],
+    think: ["thinks", "thought", "thought", "thinking"],
+    see: ["sees", "saw", "seen", "seeing"],
+    hear: ["hears", "heard", "heard", "hearing"],
+    go: ["goes", "went", "gone", "going"],
+    come: ["comes", "came", "come", "coming"],
+    become: ["becomes", "became", "become", "becoming"],
+    give: ["gives", "gave", "given", "giving"],
+    take: ["takes", "took", "taken", "taking"],
+    make: ["makes", "made", "made", "making"],
+    find: ["finds", "found", "found", "finding"],
+    hold: ["holds", "held", "held", "holding"],
+    lead: ["leads", "led", "led", "leading"],
+    leave: ["leaves", "left", "left", "leaving"],
+    send: ["sends", "sent", "sent", "sending"],
+    stand: ["stands", "stood", "stood", "standing"],
+    write: ["writes", "wrote", "written", "writing"],
+    bring: ["brings", "brought", "brought", "bringing"],
+    teach: ["teaches", "taught", "taught", "teaching"],
+    seek: ["seeks", "sought", "sought", "seeking"],
+    flee: ["flees", "fled", "fled", "fleeing"],
+    die: ["dies", "died", "died", "dying"],
+    lie: ["lies", "lay", "lain", "lying"],
+    fall: ["falls", "fell", "fallen", "falling"],
+    feel: ["feels", "felt", "felt", "feeling"],
+    keep: ["keeps", "kept", "kept", "keeping"],
+    lose: ["loses", "lost", "lost", "losing"],
+    meet: ["meets", "met", "met", "meeting"],
+    pay: ["pays", "paid", "paid", "paying"],
+    put: ["puts", "put", "put", "putting"],
+    run: ["runs", "ran", "run", "running"],
+    sit: ["sits", "sat", "sat", "sitting"],
+    show: ["shows", "showed", "shown", "showing"],
+    understand: ["understands", "understood", "understood", "understanding"],
+    bear: ["bears", "bore", "borne", "bearing"],
+    beget: ["begets", "begot", "begotten", "begetting"],
+    forget: ["forgets", "forgot", "forgotten", "forgetting"],
+    get: ["gets", "got", "got", "getting"],
+    grow: ["grows", "grew", "grown", "growing"],
+    win: ["wins", "won", "won", "winning"],
+    strike: ["strikes", "struck", "struck", "striking"],
+    swear: ["swears", "swore", "sworn", "swearing"],
+    throw: ["throws", "threw", "thrown", "throwing"],
+    wake: ["wakes", "woke", "woken", "waking"]
+  };
+  function verbForms(base) {
+    if (VERB_IRREG[base]) return VERB_IRREG[base];
+    var third = pluralise(base);                 // same spelling rules as nouns
+    var stem = base, past;
+    if (/e$/.test(base)) past = base + "d";
+    else if (/[^aeiou]y$/.test(base)) past = base.slice(0, -1) + "ied";
+    else past = base + "ed";
+    var ing = /e$/.test(base) && !/ee$/.test(base) ? base.slice(0, -1) + "ing" : base + "ing";
+    return [third, past, past, ing];
+  }
+
+  function headWord(s, fn) {
+    var p = s.split(" ");
+    p[0] = fn(p[0]);
+    return p.join(" ");
+  }
+  function tailWord(s, fn) {
+    var p = s.split(" ");
+    p[p.length - 1] = fn(p[p.length - 1]);
+    return p.join(" ");
+  }
+
+  // The commonest words carry their own forms; a rule would only mangle them.
+  var CLOSED = {
+    "ὁ": { nom: "the", gen: "of the", dat: "to the", acc: "the", voc: "the" },
+    "ἐγώ": {
+      sg: { nom: "I", gen: "of me", dat: "to me", acc: "me" },
+      pl: { nom: "we", gen: "of us", dat: "to us", acc: "us" }
+    },
+    "σύ": {
+      sg: { nom: "you", gen: "your", dat: "to you", acc: "you" },
+      pl: { nom: "you", gen: "of you", dat: "to you", acc: "you" }
+    },
+    "αὐτός": {
+      sg: { nom: "he", gen: "his", dat: "to him", acc: "him" },
+      pl: { nom: "they", gen: "their", dat: "to them", acc: "them" },
+      neuter: { sg: { nom: "it", gen: "its", dat: "to it", acc: "it" },
+                pl: { nom: "they", gen: "their", dat: "to them", acc: "them" } },
+      feminine: { sg: { nom: "she", gen: "her", dat: "to her", acc: "her" },
+                  pl: { nom: "they", gen: "their", dat: "to them", acc: "them" } }
+    },
+    "οὗτος": {
+      sg: { nom: "this", gen: "of this", dat: "to this", acc: "this" },
+      pl: { nom: "these", gen: "of these", dat: "to these", acc: "these" }
+    },
+    "ἐκεῖνος": {
+      sg: { nom: "that", gen: "of that", dat: "to that", acc: "that" },
+      pl: { nom: "those", gen: "of those", dat: "to those", acc: "those" }
+    },
+    "ὅδε": {
+      sg: { nom: "this", gen: "of this", dat: "to this", acc: "this" },
+      pl: { nom: "these", gen: "of these", dat: "to these", acc: "these" }
+    },
+    "ὅς": {
+      sg: { nom: "who", gen: "whose", dat: "to whom", acc: "whom" },
+      pl: { nom: "who", gen: "whose", dat: "to whom", acc: "whom" },
+      neuter: { sg: { nom: "which", gen: "of which", dat: "to which", acc: "which" },
+                pl: { nom: "which", gen: "of which", dat: "to which", acc: "which" } }
+    },
+    "ὅστις": {
+      sg: { nom: "whoever", gen: "of whoever", dat: "to whoever", acc: "whomever" },
+      pl: { nom: "whoever", gen: "of whoever", dat: "to whoever", acc: "whomever" }
+    },
+    "τίς": {
+      sg: { nom: "who?", gen: "whose?", dat: "to whom?", acc: "whom?" },
+      pl: { nom: "who?", gen: "whose?", dat: "to whom?", acc: "whom?" },
+      neuter: { sg: { nom: "what?", gen: "of what?", dat: "to what?", acc: "what?" },
+                pl: { nom: "what?", gen: "of what?", dat: "to what?", acc: "what?" } }
+    },
+    "τις": {
+      sg: { nom: "someone", gen: "of someone", dat: "to someone", acc: "someone" },
+      pl: { nom: "some", gen: "of some", dat: "to some", acc: "some" },
+      neuter: { sg: { nom: "something", gen: "of something", dat: "to something", acc: "something" },
+                pl: { nom: "some things", gen: "of some", dat: "to some", acc: "some things" } }
+    },
+    "οὐδείς": {
+      sg: { nom: "no one", gen: "of no one", dat: "to no one", acc: "no one" },
+      pl: { nom: "none", gen: "of none", dat: "to none", acc: "none" },
+      neuter: { sg: { nom: "nothing", gen: "of nothing", dat: "to nothing", acc: "nothing" },
+                pl: { nom: "nothing", gen: "of nothing", dat: "to nothing", acc: "nothing" } }
+    },
+    "μηδείς": {
+      sg: { nom: "no one", gen: "of no one", dat: "to no one", acc: "no one" },
+      pl: { nom: "none", gen: "of none", dat: "to none", acc: "none" },
+      neuter: { sg: { nom: "nothing", gen: "of nothing", dat: "to nothing", acc: "nothing" },
+                pl: { nom: "nothing", gen: "of nothing", dat: "to nothing", acc: "nothing" } }
+    }
+  };
+
+  var SUBJECT = { "1stsg": "I", "2ndsg": "you", "3rdsg": "he", "1stpl": "we",
+                  "2ndpl": "you", "3rdpl": "they" };
+
+  var ADVERB_IRREG = { good: "well", true: "truly", whole: "wholly", due: "duly",
+                       full: "fully", public: "publicly", easy: "easily" };
+  function adverbise(base) {
+    return tailWord(base, function (w) {
+      if (ADVERB_IRREG[w]) return ADVERB_IRREG[w];
+      if (/ly$/.test(w)) return w;
+      if (/ue$/.test(w)) return w.slice(0, -1) + "ly";
+      if (/le$/.test(w)) return w.slice(0, -1) + "y";
+      if (/[^aeiou]y$/.test(w)) return w.slice(0, -1) + "ily";
+      if (/ic$/.test(w)) return w + "ally";
+      return w + "ly";
+    });
+  }
+
+  // Glosses that already carry a degree, so "more better" never happens.
+  var ALREADY_GRADED = /^(more|most|less|least|better|best|worse|worst|greater|greatest|older|elder|younger|stronger|smaller|larger)\b/;
+
+  function feats(parse) {
+    var f = {};
+    (parse || "").split(/\s+/).forEach(function (w) { if (w) f[w] = true; });
+    return f;
+  }
+  function caseOf(f) {
+    return f.nominative ? "nom" : f.genitive ? "gen" : f.dative ? "dat"
+         : f.accusative ? "acc" : f.vocative ? "voc" : null;
+  }
+
+  function closedForm(lemma, f) {
+    var t = CLOSED[lemmaKey(lemma)];
+    if (!t) return null;
+    var num = (f.plural || f.dual) ? "pl" : "sg";
+    var cs = caseOf(f) || "nom";
+    if (cs === "voc") cs = "nom";
+    if (f.neuter && t.neuter) t = t.neuter;
+    else if (f.feminine && t.feminine) t = t.feminine;
+    var cell = t[num] || t;
+    return cell[cs] || cell.nom || null;
+  }
+
+  // Greek perfects whose sense is present in English: OI)=DA is "I know", not
+  // "I have known"; the pluperfect of such a verb is then a plain past.
+  var PRESENT_SENSE_PERFECT = {
+    "οἶδα": 1,            // oi)=da, know
+    "ἔοικα": 1,      // e)/oika, seem
+    "δέδοικα": 1,
+    "δέδια": 1,
+    "μιμνήσκω": 1,
+    "ἵστημι": 1,
+    "θνῃσκω": 1
+  };
+
+  function inflectVerb(base, f, lemma) {
+    // Many LSJ glosses are written as English infinitives ("to be able"). The
+    // engine supplies the "to" itself, so strip it or it doubles up.
+    base = base.replace(/^to\s+/, "");
+    var v = verbForms(base.split(" ")[0]);
+    var rest = base.split(" ").slice(1).join(" ");
+    var tail = rest ? " " + rest : "";
+
+    if (PRESENT_SENSE_PERFECT[lemmaKey(lemma || "")] && (f.perfect || f.pluperfect)) {
+      var shifted = {};
+      Object.keys(f).forEach(function (k) {
+        if (k !== "perfect" && k !== "pluperfect") shifted[k] = f[k];
+      });
+      if (f.pluperfect) shifted.aorist = true; else shifted.present = true;
+      f = shifted;
+    }
+
+    if (f.infinitive) return "to " + base;
+    if (f.participle) {
+      if (f.aorist || f.perfect || f.pluperfect) return "having " + v[2] + tail;
+      if (f.future) return "about to " + base;
+      return v[3] + tail;
+    }
+    if (f.imperative) return base + "!";
+
+    var who = SUBJECT[(f["1st"] ? "1st" : f["2nd"] ? "2nd" : "3rd") +
+                      ((f.plural || f.dual) ? "pl" : "sg")];
+    var third = who === "he";
+    var body;
+    if (f.future) body = "will " + base;
+    else if (f.perfect) body = (third ? "has " : "have ") + v[2] + tail;
+    else if (f.pluperfect) body = "had " + v[2] + tail;
+    else if (f.aorist || f.imperfect) body = v[1] + tail;
+    else body = (third ? v[0] + tail : base);
+
+    // "be" is the one English verb that still inflects for person, so a gloss
+    // beginning with it needs am/are/is rather than the bare stem.
+    if (/^be\b/.test(base) && !f.subjunctive && !f.optative) {
+      var pl = !!(f.plural || f.dual);
+      var pers = f["1st"] ? 1 : f["2nd"] ? 2 : 3;
+      var cop;
+      if (f.future) cop = "will be";
+      else if (f.perfect) cop = (third ? "has been" : "have been");
+      else if (f.pluperfect) cop = "had been";
+      else if (f.aorist || f.imperfect) cop = (!pl && pers !== 2) ? "was" : "were";
+      else cop = (!pl && pers === 1) ? "am" : (!pl && pers === 3) ? "is" : "are";
+      body = cop + (tail || base.slice(2));
+    }
+
+    if (f.subjunctive) body = "may " + base;
+    else if (f.optative) body = "might " + base;
+    if (f.passive) {
+      body = (f.aorist || f.imperfect || f.pluperfect)
+        ? (third || !(f.plural || f.dual) ? "was " : "were ") + v[2] + tail
+        : (third ? "is " : "are ") + v[2] + tail;
+    }
+    return who + " " + body;
+  }
+
+  function inflectGloss(base, pos, parse, lemma) {
+    if (!base) return "";
+    // Only ever shape the first sense; alternatives belong in the panel.
+    base = base.split(/[;,]/)[0].trim();
+    if (!base) return "";
+    var f = feats(parse);
+
+    var closed = closedForm(lemma, f);
+    if (closed) return closed;
+
+    if (pos === "verb" || pos === "verb participle") return inflectVerb(base, f, lemma);
+
+    // Some adjective-shaped words are nouns in use (KATH/GOROS, "accuser").
+    if (pos === "adjective" && substantive[lemmaKey(lemma)]) pos = "noun";
+
+    if (pos === "noun") {
+      var out = (f.plural || f.dual) ? tailWord(base, pluralise) : base;
+      var cs = caseOf(f);
+      if (cs === "gen") out = "of " + out;
+      else if (cs === "dat") out = "to " + out;
+      else if (cs === "voc") out = "O " + out;
+      return out;
+    }
+
+    // Morpheus marks the adverbial form of an adjective, and the gloss is then
+    // the adjective, so it needs turning into an English adverb. A word already
+    // tagged as an adverb in its own right is left alone: "thus" must not
+    // become "thusly".
+    if (f.adverbial) return adverbise(base);
+
+    if (pos === "adjective" || pos === "numeral") {
+      // English adjectives do not agree, so the bare word is already right.
+      // Degree is worth marking - unless the gloss is itself a comparative,
+      // which would give "more better".
+      if (ALREADY_GRADED.test(base)) return base;
+      if (f.comparative) return "more " + base;
+      if (f.superlative) return "most " + base;
+      return base;
+    }
+
+    if (pos === "pronoun") {
+      var cs2 = caseOf(f);
+      var o = (f.plural || f.dual) ? tailWord(base, pluralise) : base;
+      if (cs2 === "gen") o = "of " + o;
+      else if (cs2 === "dat") o = "to " + o;
+      return o;
+    }
+
+    return base;
   }
 
   /* --- DOM helpers ------------------------------------------------------- */
@@ -114,10 +446,21 @@
   var chunkByRef = {};
   var commonLemmas = {}, lemmaFreq = {}, corpusFreq = {};
   var entryCache = {};
-  var suppressed = {};
+  var suppressed = {}, substantive = {};
   var currentRef = null;
   var openWord = null;
   var popLemmas = [], popLemma = null, popAnchor = null, popRefPage = null;
+
+  function moodRank(parse) {
+    if (!parse) return 0;
+    if (parse.indexOf("indicative") >= 0) return 4;
+    if (parse.indexOf("participle") >= 0) return 3;
+    if (parse.indexOf("infinitive") >= 0) return 3;
+    if (parse.indexOf("imperative") >= 0) return 2;
+    if (parse.indexOf("subjunctive") >= 0) return 1;
+    if (parse.indexOf("optative") >= 0) return 1;
+    return 2;
+  }
 
   function lexRow(lemma) { return lex.lex[lemmaKey(lemma)] || null; }
   function glossFor(l) { var h = lexRow(l); return h ? h[1] : ""; }
@@ -148,7 +491,11 @@
       if (d) return d;
       // Tie: the headword this dialogue actually uses wins. EI)/H is a form of
       // both EI)MI/ and E)A/W, and only one of them is everywhere in the text.
-      return (corpusFreq[lemmaKey(y.lemma)] || 0) - (corpusFreq[lemmaKey(x.lemma)] || 0);
+      d = (corpusFreq[lemmaKey(y.lemma)] || 0) - (corpusFreq[lemmaKey(x.lemma)] || 0);
+      if (d) return d;
+      // Same headword, several parses: show the likeliest mood first, so
+      // E)QE/LW reads "I am willing" rather than "I may be willing".
+      return moodRank(y.parse) - moodRank(x.parse);
     });
   }
 
@@ -190,7 +537,8 @@
     var an = analysesFor(key);
     if (!an) return gl;
     if (S.glossType === "gloss" || S.glossType === "both") {
-      gl.append(txt(shortFor(an[0].lemma) || ""));
+      gl.append(txt(inflectGloss(shortFor(an[0].lemma), an[0].pos,
+                                 an[0].parse, an[0].lemma)));
     }
     if (S.glossType === "parse" || S.glossType === "both") {
       gl.append(el("span", "pr", abbreviate(an[0].parse) || an[0].pos || ""));
@@ -953,6 +1301,7 @@
     ]).then(function (res) {
       text = res[0]; morph = res[1]; lex = res[2];
       (lex.suppress || []).forEach(function (k) { suppressed[k] = 1; });
+      (lex.substantive || []).forEach(function (k) { substantive[k] = 1; });
       text.chunks.forEach(function (c) { chunkByRef[c.ref] = c; });
       computeCorpusFreq();
       computeFrequencies();

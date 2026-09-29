@@ -347,6 +347,7 @@ def main():
     sup_note = {lemma_key(k): v for k, v in sup.get("note", {}).items()}
     suppress = sorted({lemma_key(k) for k in sup.get("suppress", [])})
     prefer = {k: lemma_key(v) for k, v in sup.get("prefer", {}).items()}
+    substantive = sorted({lemma_key(k) for k in sup.get("substantive", [])})
 
     manifest, truncated = {}, 0
     for i, (k, entries) in enumerate(sorted(found.items())):
@@ -387,7 +388,7 @@ def main():
     with open(os.path.join(ROOT, "data", "lex", "manifest.json"), "w",
               encoding="utf-8") as f:
         json.dump({"lex": manifest, "note": notes, "suppress": suppress,
-                   "prefer": prefer,
+                   "prefer": prefer, "substantive": substantive,
                    "missing": sorted(set(missing) - set(manifest)),
                    "alias": aliased},
                   f, ensure_ascii=False, separators=(",", ":"))

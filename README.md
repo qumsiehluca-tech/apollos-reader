@@ -38,7 +38,13 @@ committed.
 python tools/build_text.py                    # TEI -> aligned reading chunks
 python tools/build_morph.py plato-apology     # every word form -> headword + parse
 python tools/build_lexicon.py plato-apology   # the LSJ entries this text needs
+python tools/stamp_assets.py                  # after editing anything in assets/
 ```
+
+`stamp_assets.py` rewrites the `?v=` on the stylesheet and script in
+`index.html` to a hash of their contents. GitHub Pages serves both under the
+same name forever, so without it a returning reader can run yesterday's script
+against today's data until their cache expires.
 
 **`build_text.py`** downloads the Greek and English TEI from the Perseus
 canonical repository and flattens both into chunks. The two editions carry an

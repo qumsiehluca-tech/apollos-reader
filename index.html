@@ -9,16 +9,17 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
 
 <a class="skip-link" href="#reader">Skip to the text</a>
+<div class="progress" id="progress" aria-hidden="true"><i></i></div>
 
 <header class="topbar">
   <button class="icon-btn" id="navToggle" aria-label="Sections" aria-expanded="false" title="Sections (s)">
-    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5h14M3 10h14M3 14.5h14"/></svg>
   </button>
 
   <div class="brand">
@@ -28,46 +29,44 @@
 
   <nav class="modes" id="modes" role="tablist" aria-label="Reading mode">
     <button role="tab" data-mode="parallel" aria-selected="true" title="Greek beside the translation (1)">
-      <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="6" height="13"/><rect x="11.5" y="3.5" width="6" height="13"/></svg>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4" width="6" height="12" rx="1"/><rect x="11.5" y="4" width="6" height="12" rx="1"/></svg>
       <span>Parallel</span>
     </button>
-    <button role="tab" data-mode="interlinear" aria-selected="false" title="Greek with glosses under each word (2)">
-      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 9h9M3 13h14M3 17h9"/></svg>
+    <button role="tab" data-mode="interlinear" aria-selected="false" title="Greek with a gloss under each word (2)">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 8.5h8M3 13h14M3 16.5h8"/></svg>
       <span>Interlinear</span>
     </button>
     <button role="tab" data-mode="greek" aria-selected="false" title="Greek alone (3)">
-      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h9"/></svg>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5h14M3 10h14M3 14.5h9"/></svg>
       <span>Greek</span>
     </button>
   </nav>
 
   <div class="actions">
     <button class="icon-btn" id="searchBtn" aria-label="Search" title="Search (/)">
-      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5"/><path d="M13.2 13.2 17 17"/></svg>
     </button>
     <button class="icon-btn" id="settingsBtn" aria-label="Display settings" aria-expanded="false" title="Display settings (,)">
-      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h14M3 14h14"/><circle cx="8" cy="6" r="2.2"/><circle cx="13" cy="14" r="2.2"/></svg>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6.5h14M3 13.5h14"/><circle cx="7.5" cy="6.5" r="2.1"/><circle cx="13" cy="13.5" r="2.1"/></svg>
     </button>
   </div>
 </header>
 <div class="meander" aria-hidden="true"></div>
 
 <div class="layout">
-  <!-- ------------------------------------------------ section navigator -->
   <aside class="sidebar" id="sidebar" aria-label="Sections">
     <div class="sidebar-inner">
       <div class="side-head">
         <h2>Sections</h2>
         <button class="icon-btn small" id="navClose" aria-label="Close sections">
-          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/></svg>
         </button>
       </div>
-      <p class="side-hint">Stephanus pages. Jump anywhere &mdash; your place is remembered.</p>
+      <p class="side-hint">Stephanus pages. Your place is remembered.</p>
       <div id="sectionNav" class="section-nav"></div>
     </div>
   </aside>
 
-  <!-- ------------------------------------------------------- the reader -->
   <main id="reader" class="reader" tabindex="-1">
     <div class="loading" id="loading">
       <div class="loading-mark" aria-hidden="true">&#x2756;</div>
@@ -76,30 +75,35 @@
   </main>
 </div>
 
-<!-- --------------------------------------------------------- word panel -->
-<aside class="wordpanel" id="wordPanel" aria-live="polite" aria-label="Word information" hidden>
-  <div class="wp-grab" aria-hidden="true"></div>
-  <header class="wp-head">
-    <div>
-      <h3 class="wp-form gk" id="wpForm"></h3>
-      <p class="wp-where" id="wpWhere"></p>
+<!-- ------------------------------------------- word lookup (anchored popover,
+     a bottom sheet on small screens) ----------------------------------------->
+<div class="pop" id="pop" role="dialog" aria-label="Word" hidden>
+  <div class="pop-arrow" aria-hidden="true"></div>
+  <div class="pop-grab" aria-hidden="true"></div>
+  <header class="pop-head">
+    <div class="pop-id">
+      <h3 class="pop-form gk" id="popForm"></h3>
+      <p class="pop-ref" id="popRef"></p>
     </div>
-    <button class="icon-btn small" id="wpClose" aria-label="Close">
-      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>
+    <button class="icon-btn small" id="popClose" aria-label="Close">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/></svg>
     </button>
   </header>
-  <div class="wp-body" id="wpBody"></div>
-  <footer class="wp-foot" id="wpFoot"></footer>
-</aside>
+  <div class="pop-body" id="popBody"></div>
+  <footer class="pop-foot">
+    <button class="pop-more" id="popMore" aria-expanded="false">Full dictionary entry</button>
+    <div class="pop-links" id="popLinks"></div>
+  </footer>
+</div>
 
-<!-- ------------------------------------------------------ settings sheet -->
+<!-- --------------------------------------------------------- settings sheet -->
 <aside class="sheet" id="settings" aria-label="Display settings" hidden>
   <header class="sheet-head">
     <h3>Display</h3>
     <div class="sheet-head-actions">
       <button class="text-btn" id="resetSettings">Reset</button>
       <button class="icon-btn small" id="settingsClose" aria-label="Close settings">
-        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/></svg>
       </button>
     </div>
   </header>
@@ -115,10 +119,10 @@
       </div>
       <h4>Accent</h4>
       <div class="chips swatches" id="setAccent" role="radiogroup" aria-label="Accent colour">
-        <button role="radio" data-v="terracotta" title="Terracotta"><i></i>Terracotta</button>
-        <button role="radio" data-v="gold" title="Gold"><i></i>Gold</button>
-        <button role="radio" data-v="olive" title="Olive"><i></i>Olive</button>
-        <button role="radio" data-v="lapis" title="Lapis"><i></i>Lapis</button>
+        <button role="radio" data-v="terracotta"><i></i>Terracotta</button>
+        <button role="radio" data-v="gold"><i></i>Gold</button>
+        <button role="radio" data-v="olive"><i></i>Olive</button>
+        <button role="radio" data-v="lapis"><i></i>Lapis</button>
       </div>
     </section>
 
@@ -147,7 +151,7 @@
       </label>
     </section>
 
-    <section class="set-group" data-only="interlinear">
+    <section class="set-group">
       <h4>Interlinear glosses</h4>
       <div class="chips" id="setGloss" role="radiogroup" aria-label="Show glosses">
         <button role="radio" data-v="always">Always</button>
@@ -165,25 +169,26 @@
       <h4>Text</h4>
       <label class="toggle"><input type="checkbox" id="setShowRefs"><span>Stephanus markers in the margin</span></label>
       <label class="toggle"><input type="checkbox" id="setShowVocab"><span>Vocabulary list on each section</span></label>
-      <label class="toggle"><input type="checkbox" id="setShowCitations"><span>Citations inside dictionary entries</span></label>
       <label class="toggle"><input type="checkbox" id="setSwapSides"><span>Translation on the left</span></label>
       <label class="toggle"><input type="checkbox" id="setJustify"><span>Justify the Greek</span></label>
+      <h4>Dictionary</h4>
+      <label class="toggle"><input type="checkbox" id="setShowCitations"><span>Show citations inside entries</span></label>
     </section>
 
   </div>
 </aside>
 
-<!-- -------------------------------------------------------- search sheet -->
+<!-- ---------------------------------------------------------- search sheet -->
 <aside class="sheet" id="search" aria-label="Search" hidden>
   <header class="sheet-head">
     <h3>Search</h3>
     <button class="icon-btn small" id="searchClose" aria-label="Close search">
-      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/></svg>
     </button>
   </header>
   <div class="sheet-body">
     <input type="search" id="searchInput" class="search-input" placeholder="Greek or English&hellip;" autocomplete="off" spellcheck="false">
-    <p class="side-hint">Accents and breathings are ignored, so <span class="gk">ανθρωπος</span> finds <span class="gk">&#x1F04;&#x03BD;&#x03B8;&#x03C1;&#x03C9;&#x03C0;&#x03BF;&#x03C2;</span>.</p>
+    <p class="side-hint">Accents are ignored, so <span class="gk">ανθρωπος</span> finds <span class="gk">&#x1F04;&#x03BD;&#x03B8;&#x03C1;&#x03C9;&#x03C0;&#x03BF;&#x03C2;</span>. Latin letters search the translation.</p>
     <div id="searchResults" class="search-results"></div>
   </div>
 </aside>
@@ -229,10 +234,10 @@
       dictionary data published here carry
       <a href="https://creativecommons.org/licenses/by-sa/3.0/us/" rel="noopener license">the same licence</a>.
       The site&rsquo;s own code is MIT licensed. Glosses under the Greek in interlinear mode are
-      generated automatically from the lexicon and the parser: they are a study aid and
-      will sometimes pick the wrong sense, so check the full entry before trusting one.
-      If you hold rights in anything here and would like it removed, open an issue on the
-      repository and it will come down.
+      a study aid, generated from the lexicon and the parser or written by hand: they pick one
+      sense out of many and will sometimes pick the wrong one, so check the full entry before
+      trusting one. If you hold rights in anything here and would like it removed, open an issue
+      on the repository and it will come down.
     </p>
     <p class="foot-sig">
       <span class="gk">&#x1F41;&#x03BD; &#x03BF;&#x1F36;&#x03B4;&#x03B1; &#x1F45;&#x03C4;&#x03B9; &#x03BF;&#x1F50;&#x03B4;&#x1F72;&#x03BD; &#x03BF;&#x1F36;&#x03B4;&#x03B1;</span>

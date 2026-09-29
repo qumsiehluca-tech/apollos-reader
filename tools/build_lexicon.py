@@ -256,6 +256,30 @@ def short_gloss(glosses, first_sense):
     return txt
 
 
+def tiny_gloss(g):
+    """A gloss narrow enough to sit under the word in interlinear mode.
+
+    A column is as wide as the wider of the word and its gloss, so a 71-
+    character gloss for PROS shreds the line. Parentheticals and all but the
+    first sense are dropped; anything still long is written out by hand in
+    supplement.json instead.
+    """
+    if not g:
+        return ""
+    g = re.sub(r"\([^)]*\)", " ", g)
+    g = re.sub(r"\s+", " ", g).strip(" ,;:.-")
+    g = re.split(r";", g)[0]
+    parts = [p.strip() for p in g.split(",") if p.strip()]
+    if not parts:
+        return ""
+    out = parts[0]
+    if len(parts) > 1 and len(out) + len(parts[1]) + 2 <= 16:
+        out += ", " + parts[1]
+    if len(out) > 18:
+        out = out[:17].rstrip(" ,;:-") + "…"
+    return out
+
+
 def main():
     slugs = sys.argv[1:] or ["plato-apology"]
     wanted = {}
@@ -319,8 +343,10 @@ def main():
     with open(os.path.join(ROOT, "tools", "supplement.json"), encoding="utf-8") as f:
         sup = json.load(f)
     sup_gloss = {lemma_key(k): v for k, v in sup.get("gloss", {}).items()}
+    sup_short = {lemma_key(k): v for k, v in sup.get("short", {}).items()}
     sup_note = {lemma_key(k): v for k, v in sup.get("note", {}).items()}
     suppress = sorted({lemma_key(k) for k in sup.get("suppress", [])})
+    prefer = {k: lemma_key(v) for k, v in sup.get("prefer", {}).items()}
 
     manifest, truncated = {}, 0
     for i, (k, entries) in enumerate(sorted(found.items())):
@@ -342,7 +368,7 @@ def main():
         src = 0
         if k in sup_gloss:
             gloss, src = sup_gloss[k], 1
-        manifest[k] = [i, gloss, src]
+        manifest[k] = [i, gloss, src, sup_short.get(k) or tiny_gloss(gloss)]
         with open(os.path.join(edir, "%d.json" % i), "w", encoding="utf-8") as f:
             json.dump({"hw": entries[0]["hw"], "html": body},
                       f, ensure_ascii=False, separators=(",", ":"))
@@ -352,7 +378,8 @@ def main():
     missing = sorted(set(wanted) - set(found))
     for k in missing:
         if k in sup_gloss or k in sup_note:
-            manifest[k] = [-1, sup_gloss.get(k, ""), 1]
+            g = sup_gloss.get(k, "")
+            manifest[k] = [-1, g, 1, sup_short.get(k) or tiny_gloss(g)]
 
     notes = {k: v for k, v in sup_note.items() if k in wanted}
     unused = sorted((set(sup_gloss) | set(sup_note)) - set(wanted))
@@ -360,6 +387,7 @@ def main():
     with open(os.path.join(ROOT, "data", "lex", "manifest.json"), "w",
               encoding="utf-8") as f:
         json.dump({"lex": manifest, "note": notes, "suppress": suppress,
+                   "prefer": prefer,
                    "missing": sorted(set(missing) - set(manifest)),
                    "alias": aliased},
                   f, ensure_ascii=False, separators=(",", ":"))

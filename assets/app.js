@@ -395,20 +395,29 @@
      ======================================================================== */
   function positionPop() {
     var pop = $("pop");
-    if (mq(PHONE) || !popAnchor) { pop.removeAttribute("data-dir"); return; }
+    if (mq(PHONE) || !popAnchor) {
+      pop.removeAttribute("data-dir");
+      pop.style.maxHeight = "";
+      return;
+    }
 
     var r = popAnchor.getBoundingClientRect();
     var vw = document.documentElement.clientWidth;
     var vh = window.innerHeight;
-    var w = pop.offsetWidth, h = pop.offsetHeight;
     var gap = 10, edge = 12;
 
-    var left = r.left + r.width / 2 - w / 2;
-    left = Math.max(edge, Math.min(left, vw - w - edge));
+    // Take whichever side has room, then cap the height to that room. Without
+    // the cap, expanding the entry next to a word halfway down the screen
+    // pushes the popover off the bottom.
+    var below = vh - r.bottom - gap - edge;
+    var above = r.top - gap - edge;
+    var up = below < 260 && above > below;
+    pop.style.maxHeight = Math.max(180, Math.min(540, up ? above : below)) + "px";
 
-    var below = vh - r.bottom;
-    var up = below < h + gap + edge && r.top > h + gap + edge;
+    var w = pop.offsetWidth, h = pop.offsetHeight;
+    var left = Math.max(edge, Math.min(r.left + r.width / 2 - w / 2, vw - w - edge));
     var top = up ? r.top - h - gap : r.bottom + gap;
+    top = Math.max(edge, Math.min(top, vh - h - edge));
 
     pop.dataset.dir = up ? "up" : "down";
     pop.style.left = (left + window.scrollX) + "px";

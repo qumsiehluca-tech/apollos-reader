@@ -113,7 +113,7 @@
   var suppressed = {};
   var currentRef = null;
   var openWord = null;
-  var popLemmas = [], popLemma = null, popAnchor = null;
+  var popLemmas = [], popLemma = null, popAnchor = null, popRefPage = null;
 
   function lexRow(lemma) { return lex.lex[lemmaKey(lemma)] || null; }
   function glossFor(l) { var h = lexRow(l); return h ? h[1] : ""; }
@@ -483,17 +483,30 @@
   function buildLinks(lemma) {
     var foot = $("popLinks");
     foot.textContent = "";
-    function add(label, href) {
+    function add(label, href, title) {
       var a = el("a", null, label);
       a.href = href; a.target = "_blank"; a.rel = "noopener";
+      if (title) a.title = title;
       foot.append(a);
     }
+    // Logeion resolves an inflected form to its headword on its own, so the
+    // surface form is a useful thing to hand it. (Perseus' old Hopper word
+    // study tool is not linked: its morph endpoint returns 503.)
     var form = $("popForm").textContent;
-    if (lemma) add("Logeion", "https://logeion.uchicago.edu/" + encodeURIComponent(lemmaLabel(lemma)));
-    add("Perseus parse", "https://www.perseus.tufts.edu/hopper/morph?l=" +
-      encodeURIComponent(form) + "&la=greek");
-    if (lemma) add("Wiktionary", "https://en.wiktionary.org/wiki/" +
-      encodeURIComponent(lemmaLabel(lemma)) + "#Ancient_Greek");
+    add("Logeion", "https://logeion.uchicago.edu/" +
+      encodeURIComponent(lemma ? lemmaLabel(lemma) : form),
+      "Every major lexicon at once");
+    if (lemma) {
+      add("Wiktionary", "https://en.wiktionary.org/wiki/" +
+        encodeURIComponent(lemmaLabel(lemma)) + "#Ancient_Greek",
+        "Wiktionary, Ancient Greek section");
+    }
+    if (popRefPage) {
+      add("This passage in Scaife",
+        "https://scaife.perseus.org/reader/" + text.urn + ".perseus-grc2:" +
+        encodeURIComponent(popRefPage) + "/",
+        "Perseus' current reader");
+    }
   }
 
   function openPop(span) {
@@ -509,6 +522,8 @@
 
     $("popForm").textContent = span.textContent;
     $("popRef").textContent = sec ? "Apology " + sec.dataset.ref : "";
+    // Scaife cites this text by Stephanus page, so 24b links to 24.
+    popRefPage = sec ? (sec.dataset.ref.match(/^\d+/) || [null])[0] : null;
 
     var body = $("popBody");
     body.textContent = "";

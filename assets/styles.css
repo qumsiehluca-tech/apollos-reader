@@ -74,6 +74,26 @@ html[data-theme="papyrus"][data-accent="gold"]  { --accent:#9a7b12; --accent-tex
 html[data-theme="papyrus"][data-accent="olive"] { --accent:#6b7a3d; --accent-text:#55632e; }
 html[data-theme="papyrus"][data-accent="lapis"] { --accent:#3f6693; --accent-text:#355681; }
 
+/* --- scrollbars ----------------------------------------------------------
+   `color-scheme` makes the browser's own chrome (scrollbars, form controls,
+   the overscroll gutter) follow the theme; the rules under it restyle the
+   scrollbars themselves in engines that allow it. Both are needed: Firefox
+   only takes `scrollbar-*`, WebKit only takes the pseudo-elements.          */
+:root { color-scheme: dark; }
+html[data-theme="papyrus"] { color-scheme: light; }
+
+* { scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background-color: var(--rule);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: var(--text-faint); background-clip: content-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+
 /* --- reset --------------------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }

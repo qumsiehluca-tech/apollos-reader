@@ -256,6 +256,31 @@ body[data-nav="shut"] .sidebar { display: none; }
 .sec-ref:hover { color: var(--accent-text); }
 .sec-ref.copied { color: var(--accent-text); }
 html[data-refs="off"] .sec-ref { visibility: hidden; }
+.sec-ref.range { cursor: default; }
+
+/* Stephanus numbers set inside the prose, for paragraph pairing. */
+.inline-ref {
+  font-family: var(--font-ui); font-size: 9.5px; font-weight: 600;
+  letter-spacing: .07em; color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  vertical-align: .45em; cursor: pointer;
+  padding: 0 1px; border-radius: 3px; white-space: nowrap;
+  scroll-margin-top: calc(var(--topbar-h) + 26px);
+}
+.inline-ref:hover { color: var(--accent-text); background: var(--accent-soft); }
+.inline-ref.copied { color: var(--accent-text); }
+html[data-refs="off"] .inline-ref { display: none; }
+.eng-text .inline-ref { vertical-align: .4em; }
+
+/* Paragraph pairing gives the two columns room to breathe. */
+.by-paragraph.mode-parallel .sec { padding: 22px 0; }
+.by-paragraph .grc-text p + p, .by-paragraph .eng-text p + p { margin-top: 1em; }
+
+.set-note {
+  font-size: 12px; line-height: 1.6; color: var(--text-faint);
+  margin-top: 10px; max-width: 54ch;
+}
+.set-note strong { color: var(--text-dim); font-weight: 600; }
 
 .grc-text {
   font-family: var(--font-grc); font-size: var(--grc-size); line-height: var(--lead);

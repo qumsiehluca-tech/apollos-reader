@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css?v=3eda10d655">
+<link rel="stylesheet" href="assets/styles.css?v=45488402e7">
 </head>
 <body>
 
@@ -166,6 +166,21 @@
     </section>
 
     <section class="set-group">
+      <h4>Pairing</h4>
+      <div class="chips" id="setAlign" role="radiogroup" aria-label="How the text is divided">
+        <button role="radio" data-v="section">By section</button>
+        <button role="radio" data-v="paragraph">By paragraph</button>
+      </div>
+      <p class="set-note">
+        Stephanus numbers fall where they fall, often mid&#8209;sentence.
+        <strong>By section</strong> keeps one row per number, so citations line up exactly.
+        <strong>By paragraph</strong> gathers sections into the paragraph they belong to and
+        marks the numbers inline &mdash; easier to read continuously, and still
+        exactly aligned with the translation at every break.
+      </p>
+    </section>
+
+    <section class="set-group">
       <h4>Text</h4>
       <label class="toggle"><input type="checkbox" id="setShowRefs"><span>Stephanus markers in the margin</span></label>
       <label class="toggle"><input type="checkbox" id="setShowVocab"><span>Vocabulary list on each section</span></label>
@@ -246,6 +261,6 @@
   </div>
 </footer>
 
-<script src="assets/app.js?v=05abf1d5b2"></script>
+<script src="assets/app.js?v=9c8d3d57fa"></script>
 </body>
 </html>

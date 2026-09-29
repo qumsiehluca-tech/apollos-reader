@@ -146,13 +146,17 @@ def build_side(path, lang):
 
     chunks, cur, block = [], None, None
     page, speech = None, None
+    # Paragraphs run across Stephanus sections, so each block records which
+    # paragraph it belongs to. Without this the reader cannot tell a section
+    # break that starts a new paragraph from one that lands mid-sentence.
+    para_no = [0]
 
     def flush():
         nonlocal block
         if block is not None:
             text = tidy(block["s"])
             if text and cur is not None:
-                cur["blocks"].append({"t": block["t"], "s": text})
+                cur["blocks"].append({"t": block["t"], "s": text, "g": para_no[0]})
             block = None
 
     def open_block(kind="p"):
@@ -177,6 +181,7 @@ def build_side(path, lang):
             chunks.append(cur)
             open_block("p")
         elif kind == "para":
+            para_no[0] += 1
             open_block("p")
         elif kind == "para_end":
             flush()

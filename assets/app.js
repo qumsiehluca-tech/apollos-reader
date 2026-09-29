@@ -10,7 +10,7 @@
   // Rewritten by tools/stamp_assets.py from a hash of data/. The JSON under
   // data/ is served under fixed names, so without this a reader with a warm
   // cache keeps yesterday's lexicon after a rebuild.
-  var DATA_V = "52874ac92d";
+  var DATA_V = "fd81d5241c";
   var STORE = "apollos-reader:";
   var PHONE = "(max-width: 760px)";
   var DRAWER = "(max-width: 1100px)";
@@ -402,7 +402,7 @@
   var DEFAULTS = {
     mode: "parallel", theme: "obsidian", accent: "terracotta",
     grcFont: "cardo", grcSize: 21, lead: 1.95, measure: 38, engSize: 17,
-    gloss: "always", glossType: "gloss",
+    gloss: "always", glossType: "gloss", align: "section",
     showRefs: true, showVocab: false, showCitations: false,
     swapSides: false, justify: false, sidebar: true
   };
@@ -592,26 +592,28 @@
     });
   }
 
-  function vocabFor(chunk) {
+  function vocabFor(chunks) {
     var seen = {}, items = [];
-    chunk.grc.forEach(function (b) {
-      WORD_RE.lastIndex = 0;
-      var m;
-      while ((m = WORD_RE.exec(b.s)) !== null) {
-        var lemma = bestLemma(normaliseKey(m[0]));
-        if (!lemma) continue;
-        var k = lemmaKey(lemma);
-        if (seen[k] || commonLemmas[k]) continue;
-        seen[k] = 1;
-        var g = glossFor(lemma);
-        if (g) items.push([lemmaLabel(lemma), g]);
-      }
+    chunks.forEach(function (chunk) {
+      chunk.grc.forEach(function (b) {
+        WORD_RE.lastIndex = 0;
+        var m;
+        while ((m = WORD_RE.exec(b.s)) !== null) {
+          var lemma = bestLemma(normaliseKey(m[0]));
+          if (!lemma) continue;
+          var k = lemmaKey(lemma);
+          if (seen[k] || commonLemmas[k]) continue;
+          seen[k] = 1;
+          var g = glossFor(lemma);
+          if (g) items.push([lemmaLabel(lemma), g]);
+        }
+      });
     });
     return items;
   }
 
-  function vocabNode(chunk) {
-    var items = vocabFor(chunk);
+  function vocabNode(chunks) {
+    var items = vocabFor(chunks);
     if (!items.length) return null;
     var d = el("details", "vocab");
     d.append(el("summary", null, "Vocabulary · " + items.length));
@@ -625,9 +627,78 @@
     return d;
   }
 
+  /* --- grouping ------------------------------------------------------------
+     Stephanus milestones fall wherever they fall, often mid-sentence, so
+     reading section by section chops the prose up. Paragraph alignment gathers
+     consecutive sections into the paragraph they belong to.
+
+     The grouping is driven by the Greek, and only ever breaks at a section
+     boundary. That matters: the two editions do not agree on paragraphing (70
+     paragraph marks in the Greek against 39 in the translation), but they do
+     share an identical section sequence, so breaking only at section edges
+     keeps every group exactly aligned with its translation.               */
+  function buildGroups() {
+    var groups = [], lastG = null, lastSpeech = null;
+    text.chunks.forEach(function (c) {
+      var first = c.grc.length ? c.grc[0].g : lastG;
+      var newGroup = !groups.length || first !== lastG || c.speech !== lastSpeech;
+      if (newGroup) groups.push([c]);
+      else groups[groups.length - 1].push(c);
+      if (c.grc.length) lastG = c.grc[c.grc.length - 1].g;
+      lastSpeech = c.speech;
+    });
+    return groups;
+  }
+
+  function refMarker(ref, anchored) {
+    var s = el("span", "inline-ref", ref);
+    if (anchored) { s.id = "s-" + ref; s.dataset.ref = ref; }
+    s.title = "Copy a link to " + ref;
+    return s;
+  }
+
+  // Lay a run of sections out as continuous prose, starting a new paragraph
+  // only where the source does, and marking each section inline.
+  function renderFlow(host, chunks, side, interlinear, marks) {
+    var cur = null, curG = null;
+    chunks.forEach(function (c) {
+      var blocks = c[side];
+      if (!blocks.length) return;
+      blocks.forEach(function (b, i) {
+        if (cur === null || b.g !== curG || b.t === "verse" || cur.dataset.verse) {
+          cur = el("p", b.t === "verse" ? "verse" : null);
+          if (b.t === "verse") cur.dataset.verse = "1";
+          host.append(cur);
+          curG = b.g;
+        } else if (cur.childNodes.length) {
+          cur.append(txt(" "));
+        }
+        // Section mode already prints the number in the gutter.
+        if (i === 0 && marks) cur.append(refMarker(c.ref, side === "grc"), txt(" "));
+        if (side === "grc") renderRun(cur, b.s, interlinear);
+        else cur.append(txt(b.s));
+        curG = b.g;
+      });
+      if (side === "eng" && c.notes && c.notes.length) {
+        host.append(el("p", "eng-note", c.notes.join(" · ")));
+        cur = null;
+      }
+    });
+  }
+
+  function speechHead(title) {
+    var sh = el("div", "speech-head");
+    sh.append(el("div", "sh-rule"));
+    var h2 = el("h2");
+    h2.append(el("span", null, title));
+    sh.append(h2);
+    return sh;
+  }
+
   function render() {
     var interlinear = S.mode === "interlinear";
-    reader.className = "reader mode-" + S.mode;
+    var byParagraph = S.align === "paragraph";
+    reader.className = "reader mode-" + S.mode + (byParagraph ? " by-paragraph" : "");
     reader.textContent = "";
 
     var head = el("div", "work-head");
@@ -636,47 +707,48 @@
     head.append(el("div", "wh-meta", "Greek: Burnet 1905 · English: Fowler 1914"));
     reader.append(head);
 
+    var groups = byParagraph ? buildGroups()
+                             : text.chunks.map(function (c) { return [c]; });
     var lastSpeech = null;
-    text.chunks.forEach(function (c) {
-      if (c.speech && c.speech !== lastSpeech) {
-        lastSpeech = c.speech;
-        var title = (text.speeches || {})[c.speech];
-        if (title) {
-          var sh = el("div", "speech-head");
-          sh.append(el("div", "sh-rule"));
-          var h2 = el("h2");
-          h2.append(el("span", null, title));
-          sh.append(h2);
-          reader.append(sh);
-        }
+
+    groups.forEach(function (group) {
+      var head0 = group[0];
+      if (head0.speech && head0.speech !== lastSpeech) {
+        lastSpeech = head0.speech;
+        var title = (text.speeches || {})[head0.speech];
+        if (title) reader.append(speechHead(title));
       }
 
       var sec = el("section", "sec");
-      sec.id = "s-" + c.ref;
-      sec.dataset.ref = c.ref;
+      var span = group.length > 1
+        ? group[0].ref + "–" + group[group.length - 1].ref
+        : group[0].ref;
 
-      var ref = el("button", "sec-ref", c.ref);
-      ref.type = "button";
-      ref.title = "Copy a link to " + c.ref;
-      sec.append(ref);
+      if (byParagraph) {
+        sec.append(el("div", "sec-ref range", span));
+      } else {
+        sec.id = "s-" + head0.ref;
+        sec.dataset.ref = head0.ref;
+        var b = el("button", "sec-ref", head0.ref);
+        b.type = "button";
+        b.title = "Copy a link to " + head0.ref;
+        sec.append(b);
+      }
 
       var grc = el("div", "sec-grc");
       var gt = el("div", "grc-text gk");
-      renderBlocks(gt, c.grc, "grc", interlinear);
+      renderFlow(gt, group, "grc", interlinear, byParagraph);
       grc.append(gt);
       sec.append(grc);
 
       var eng = el("div", "sec-eng");
       var et = el("div", "eng-text");
-      renderBlocks(et, c.eng, "eng", false);
-      if (c.notes && c.notes.length) {
-        et.append(el("p", "eng-note", c.notes.join(" · ")));
-      }
+      renderFlow(et, group, "eng", false, byParagraph);
       eng.append(et);
       sec.append(eng);
 
       if (S.showVocab) {
-        var v = vocabNode(c);
+        var v = vocabNode(group);
         if (v) sec.append(v);
       }
       reader.append(sec);
@@ -696,7 +768,8 @@
         if (ref && ref !== currentRef) setCurrent(ref, false);
       });
     }, { rootMargin: "-80px 0px -70% 0px", threshold: 0 });
-    reader.querySelectorAll(".sec").forEach(function (s) { observer.observe(s); });
+    // Section mode marks whole rows; paragraph mode marks the inline numbers.
+    reader.querySelectorAll("[data-ref]").forEach(function (s) { observer.observe(s); });
   }
 
   function setCurrent(ref, scroll) {
@@ -1107,7 +1180,8 @@
   }
   function syncAllControls() {
     [["setTheme","theme"],["setAccent","accent"],["setGrcFont","grcFont"],
-     ["setGloss","gloss"],["setGlossType","glossType"]].forEach(function (p) {
+     ["setGloss","gloss"],["setGlossType","glossType"],
+     ["setAlign","align"]].forEach(function (p) {
       syncChips(p[0], p[1]);
     });
     $("setGrcSize").value = S.grcSize; $("outGrcSize").textContent = S.grcSize + "px";
@@ -1121,6 +1195,13 @@
     $("setJustify").checked = S.justify;
   }
 
+  // Re-rendering replaces the whole reader, so put the reader back where it was.
+  function restorePlace() {
+    if (!currentRef) return;
+    var node = $("s-" + currentRef);
+    if (node) node.scrollIntoView({ block: "start" });
+  }
+
   function setMode(mode) {
     if (S.mode === mode) return;
     S.mode = mode;
@@ -1129,12 +1210,8 @@
     $("modes").querySelectorAll("button").forEach(function (b) {
       b.setAttribute("aria-selected", b.dataset.mode === mode ? "true" : "false");
     });
-    var keep = currentRef;
     render();
-    if (keep) {
-      var node = $("s-" + keep);
-      if (node) node.scrollIntoView({ block: "start" });
-    }
+    restorePlace();
   }
 
   /* --- progress ---------------------------------------------------------- */
@@ -1174,9 +1251,9 @@
 
     // One delegated listener rather than thousands of per-word handlers.
     reader.addEventListener("click", function (e) {
-      var ref = e.target.closest(".sec-ref");
+      var ref = e.target.closest(".sec-ref:not(.range), .inline-ref");
       if (ref) {
-        var url = location.origin + location.pathname + "#" + ref.textContent;
+        var url = location.origin + location.pathname + "#" + ref.textContent.trim();
         var done = function () {
           ref.classList.add("copied");
           setTimeout(function () { ref.classList.remove("copied"); }, 900);
@@ -1246,6 +1323,7 @@
     wireChips("setGrcFont", "grcFont");
     wireChips("setGloss", "gloss");
     wireChips("setGlossType", "glossType", render);
+    wireChips("setAlign", "align", function () { render(); restorePlace(); });
     wireRange("setGrcSize", "grcSize", "outGrcSize", function (v) { return v + "px"; });
     wireRange("setLead", "lead", "outLead", function (v) { return Number(v).toFixed(2); });
     wireRange("setMeasure", "measure", "outMeasure", function (v) { return v + "rem"; });
